@@ -1,0 +1,31 @@
+FROM python:3.10-slim
+
+RUN python -m venv /opt/myenv
+
+ENV PATH=/opt/myenv/bin:$PATH
+RUN pip install --upgrade pip
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    python3-dev \
+    libjpeg-dev \
+    libpq-dev \
+    postgresql-client \
+    libssl-dev \
+    libffi-dev \
+    libcairo2 \
+    gcc \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN mkdir -p /code
+WORKDIR /code
+COPY requirements.txt tmp/requirements.txt
+COPY ./src /code
+COPY ./boot/docker-run.sh /opt/run.sh
+RUN pip install --no-cache-dir -r tmp/requirements.txt
+RUN chmod +x /opt/run.sh
+
+
+CMD ["gunicorn", "main:app", "--workers", "2", "--worker-class", "uvicorn.workers.UvicornWorker", "--bind", "0.0.0.0:8000"] 
